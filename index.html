@@ -107,6 +107,7 @@ body {
   transition: border-color 0.15s ease, transform 0.15s ease;
 }
 .day-card:hover { border-color: var(--cp-accent); transform: translateY(-1px); }
+.day-card.active { border-color: var(--cp-accent); box-shadow: 0 0 0 2px var(--cp-accent-soft), 0 0 2px rgba(0,0,0,0.12); }
 .day-head {
   display: flex;
   align-items: center;
@@ -175,7 +176,7 @@ body {
 <body>
 <div id="sidebar">
   <h1>🏌️ Ireland Golf Itinerary</h1>
-  <div class="sub">6 days along the Wild Atlantic Way · Shannon → Dublin<br>Solid lines = real driving routes between golf courses &amp; hotels (hover a line for distance/time).<br>Pins: 🟥 golf · 🟦 hotel · 🟢 pub/dinner.</div>
+  <div class="sub">6 days along the Wild Atlantic Way · Shannon → Dublin · Jul 13–18, 2026<br>Auto-zooms to <b>today's stop</b> during the trip, or the <b>nearest stop to your location</b> if you allow location access.<br>Solid lines = real driving routes (hover for distance/time). Pins: 🟥 golf · 🟦 hotel · 🟢 pub/dinner.</div>
   <div id="total" style="font-size:0.85rem;color:var(--cp-text);background:var(--cp-accent-soft);border:1px solid var(--cp-border);border-radius:10px;padding:8px 12px;margin-bottom:16px;">🚗 Calculating driving routes…</div>
   <div id="days"></div>
 </div>
@@ -231,7 +232,7 @@ function siteLink(name, label) {
 
 const days = [
   {
-    n: 'M', day: 'Monday', region: 'Co. Clare',
+    n: 'M', day: 'Monday', date: '2026-07-13', region: 'Co. Clare',
     center: [52.933, -9.345], zoom: 11,
     items: [
       { type:'travel', name:'Shannon Airport', ll:[52.7019,-8.9248], body:'Arrival point — drive ~1h to Lahinch.' },
@@ -242,7 +243,7 @@ const days = [
     ]
   },
   {
-    n: 'T', day: 'Tuesday', region: 'Co. Sligo / Mayo',
+    n: 'T', day: 'Tuesday', date: '2026-07-14', region: 'Co. Sligo / Mayo',
     center: [54.16, -9.13], zoom: 10,
     items: [
       { type:'golf', name:'Enniscrone Golf Club', ll:[54.2119,-9.0967], body:'Tee 11:30. Dunes classic on Killala Bay. Caddie €75 + tip.' },
@@ -251,7 +252,7 @@ const days = [
     ]
   },
   {
-    n: 'W', day: 'Wednesday', region: 'Belmullet → Bundoran',
+    n: 'W', day: 'Wednesday', date: '2026-07-15', region: 'Belmullet → Bundoran',
     center: [54.34, -9.16], zoom: 8,
     items: [
       { type:'golf', name:'Carne Golf Links', ll:[54.2078,-10.0680], body:'Early tee 7:30. Wild Atlantic dunes, Belmullet, Mayo. Caddie €80 + tip.' },
@@ -261,7 +262,7 @@ const days = [
     ]
   },
   {
-    n: 'Th', day: 'Thursday', region: 'Co. Donegal (36 holes)',
+    n: 'Th', day: 'Thursday', date: '2026-07-16', region: 'Co. Donegal (36 holes)',
     center: [54.95, -8.05], zoom: 9,
     items: [
       { type:'golf', name:'Narin & Portnoo Golf Links', ll:[54.8370,-8.4460], body:'Morning 9:00. “Unspoiled. Pure. Gorgeous.” Caddie €75 + tip.' },
@@ -271,7 +272,7 @@ const days = [
     ]
   },
   {
-    n: 'F', day: 'Friday', region: 'Co. Donegal (Rosapenna)',
+    n: 'F', day: 'Friday', date: '2026-07-17', region: 'Co. Donegal (Rosapenna)',
     center: [55.185, -7.74], zoom: 13,
     items: [
       { type:'golf', name:'Sandy Hills Links', ll:[55.1880,-7.7560], body:'Tee 8:30. Big-dune modern links at Rosapenna. Caddie €90 + tip.' },
@@ -282,7 +283,7 @@ const days = [
     ]
   },
   {
-    n: 'S', day: 'Saturday', region: 'Donegal → Dublin',
+    n: 'S', day: 'Saturday', date: '2026-07-18', region: 'Donegal → Dublin',
     center: [54.3, -7.2], zoom: 7,
     items: [
       { type:'golf', name:"St. Patrick's Links", ll:[55.1780,-7.7660], body:'Tee 9:00. Tom Doak masterpiece at Maghera / Rosapenna, then drive to Dublin (~3.5h).' },
@@ -384,7 +385,7 @@ days.forEach(d => {
   card.className = 'day-card';
   card.innerHTML =
     `<div class="day-head"><div class="day-badge">${d.n}</div>
-       <div><div class="day-title">${d.day}</div><div class="day-region">${d.region}</div></div></div>` +
+       <div><div class="day-title">${d.day}</div><div class="day-region">${fmtDate(d.date)} · ${d.region}</div></div></div>` +
     golf.map(g=>`<div class="row"><span class="ic">⛳</span><span><span class="lbl">Golf:</span> ${siteLink(g.name)}</span></div>`).join('') +
     (hotel?`<div class="row"><span class="ic">🛏️</span><span><span class="lbl">Stay:</span> ${siteLink(hotel.name)}</span></div>`:'') +
     pubsHtml;
@@ -393,8 +394,66 @@ days.forEach(d => {
     map.flyTo(d.center, d.zoom, { duration: 0.8 });
     if (pub) setTimeout(()=>pub._marker.openPopup(), 850);
   };
+  d._card = card;
+  d._pub = pub;
   wrap.appendChild(card);
 });
+
+// ---- Auto-focus by current date (during the trip) or current GPS location ----
+function fmtDate(iso){
+  const [y,mo,da] = iso.split('-').map(Number);
+  return new Date(y, mo-1, da).toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+}
+function isoLocal(dt){
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function haversine(a, b){
+  const R=6371000, toR=x=>x*Math.PI/180;
+  const dLat=toR(b[0]-a[0]), dLon=toR(b[1]-a[1]);
+  const s=Math.sin(dLat/2)**2 + Math.cos(toR(a[0]))*Math.cos(toR(b[0]))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+function nearestDay(lat, lon){
+  let best=null;
+  days.forEach(d => d.items.forEach(it => {
+    const dist = haversine([lat,lon], it.ll);
+    if (!best || dist < best.dist) best = { day:d, dist, name:it.name };
+  }));
+  return best;
+}
+
+const focusCtl = L.control({ position:'topleft' });
+let focusEl;
+focusCtl.onAdd = function(){ focusEl = L.DomUtil.create('div','legend'); focusEl.style.maxWidth='240px'; focusEl.style.display='none'; return focusEl; };
+focusCtl.addTo(map);
+
+function highlightCard(day){
+  days.forEach(d => d._card && d._card.classList.remove('active'));
+  if (day && day._card){ day._card.classList.add('active'); day._card.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+}
+function focusDay(day, reason, animate){
+  if (animate) map.flyTo(day.center, day.zoom, { duration:1 });
+  else map.setView(day.center, day.zoom);
+  highlightCard(day);
+  if (focusEl){ focusEl.style.display='block'; focusEl.innerHTML = `📍 <b>${reason}</b><br>${day.day}, ${fmtDate(day.date)}`; }
+  if (day._pub) setTimeout(() => day._pub._marker.openPopup(), animate ? 1050 : 450);
+}
+
+// 1) Date-based default: if today is a trip day, zoom to it (else keep the overview)
+const todayDay = days.find(d => d.date === isoLocal(new Date()));
+if (todayDay) focusDay(todayDay, 'Today on the itinerary', false);
+
+// 2) Location-based refine: if you're within 75 km of a stop, focus the nearest one
+if (navigator.geolocation) {
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const n = nearestDay(pos.coords.latitude, pos.coords.longitude);
+      if (n && n.dist < 75000) focusDay(n.day, `Nearest to you (${(n.dist/1000).toFixed(0)} km) · ${n.name}`, true);
+    },
+    () => {},
+    { enableHighAccuracy:false, timeout:8000, maximumAge:300000 }
+  );
+}
 </script>
 </body>
 </html>
