@@ -275,7 +275,7 @@ days.forEach((d, di) => {
     m.bindPopup(`<div class="popup-title">${it.name}</div><div class="popup-type">${d.day} · ${it.type}</div><div class="popup-body">${it.body}</div>`);
     it._marker = m;
     allLL.push(it.ll);
-    if (it.type === 'golf' || it.type === 'hotel') waypoints.push({ ll: it.ll, name: it.name });
+    if (it.type === 'golf' || it.type === 'hotel' || it.type === 'travel') waypoints.push({ ll: it.ll, name: it.name });
   });
 });
 
