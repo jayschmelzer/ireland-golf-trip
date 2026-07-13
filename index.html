@@ -197,6 +197,35 @@ function pin(color, glyph) {
 }
 const COL = { golf: '#b11f4b', hotel: '#0078d4', pub: '#16a34a', travel: '#f59e0b' };
 
+// Official website (or best info page) for each location
+const LINKS = {
+  'Shannon Airport': 'https://www.shannonairport.ie',
+  'Lahinch Golf Club': 'https://www.lahinchgolf.com',
+  'Vaughan Lodge Hotel ★★★★': 'https://www.vaughanlodge.ie',
+  'Cornerstone Bar & Restaurant': 'https://www.facebook.com/pages/Cornerstone-Pub/204552802894235',
+  'Enniscrone Golf Club': 'https://www.enniscronegolf.com',
+  'Ballina Manor Hotel ★★★★': 'https://www.ballinamanorhotel.ie',
+  'Dillons Bar & Restaurant': 'https://www.tripadvisor.ie/Restaurant_Review-g211864-d1649685-Reviews-Dillons_Bar_Restaurant-Ballina_County_Mayo_Western_Ireland.html',
+  'Carne Golf Links': 'https://www.carnegolflinks.com',
+  'Allingham Arms Hotel ★★★★': 'https://www.allinghamarmshotel.ie',
+  "Madden's Bridge Bar & Restaurant": 'https://www.maddensbridgebar.ie',
+  'Narin & Portnoo Golf Links': 'https://narinandportnoolinks.com',
+  'Cruit Island Golf Club': 'https://www.cruitislandgolfclub.com',
+  'Rosapenna Hotel & Golf Resort': 'https://www.rosapenna.ie',
+  'Fisk Seafood Bar': 'https://fiskseafoodbar.com',
+  'Sandy Hills Links': 'https://www.rosapenna.ie',
+  'Old Tom Morris Links': 'https://www.rosapenna.ie',
+  'The Harbour Bar, Downings': 'https://www.theharbourbardownings.ie',
+  "St. Patrick's Links": 'https://www.rosapenna.ie',
+  'The Davenport Hotel ★★★★': 'https://www.davenporthotel.ie',
+  "Lincoln's Inn": 'https://www.lincolns.ie'
+};
+function siteLink(name, label) {
+  const u = LINKS[name];
+  if (!u) return name;
+  return `<a href="${u}" target="_blank" rel="noopener" style="color:var(--cp-link);text-decoration:none;">${label || name}</a>`;
+}
+
 const days = [
   {
     n: 'M', day: 'Monday', region: 'Co. Clare',
@@ -272,7 +301,8 @@ const waypoints = [];   // primary stops (golf + hotel) in trip order
 days.forEach((d, di) => {
   d.items.forEach(it => {
     const m = L.marker(it.ll, { icon: pin(COL[it.type], it.type==='golf'?'⛳':it.type==='hotel'?'🛏':it.type==='pub'?'🍺':'✈') }).addTo(map);
-    m.bindPopup(`<div class="popup-title">${it.name}</div><div class="popup-type">${d.day} · ${it.type}</div><div class="popup-body">${it.body}</div>`);
+    const linkHtml = LINKS[it.name] ? `<div class="popup-body" style="margin-top:6px;"><a href="${LINKS[it.name]}" target="_blank" rel="noopener" style="color:var(--cp-link);font-weight:600;text-decoration:none;">🔗 Visit website ↗</a></div>` : '';
+    m.bindPopup(`<div class="popup-title">${it.name}</div><div class="popup-type">${d.day} · ${it.type}</div><div class="popup-body">${it.body}</div>${linkHtml}`);
     it._marker = m;
     allLL.push(it.ll);
     if (it.type === 'golf' || it.type === 'hotel' || it.type === 'travel') waypoints.push({ ll: it.ll, name: it.name });
@@ -344,9 +374,10 @@ days.forEach(d => {
   card.innerHTML =
     `<div class="day-head"><div class="day-badge">${d.n}</div>
        <div><div class="day-title">${d.day}</div><div class="day-region">${d.region}</div></div></div>` +
-    golf.map(g=>`<div class="row"><span class="ic">⛳</span><span><span class="lbl">Golf:</span> ${g.name}</span></div>`).join('') +
-    (hotel?`<div class="row"><span class="ic">🛏️</span><span><span class="lbl">Stay:</span> ${hotel.name}</span></div>`:'') +
-    (pub?`<div class="pub"><div class="row"><span class="ic">🍺</span><span><span class="lbl">Evening:</span> <span class="name">${pub.name}</span></span></div><div class="why">${pub.why||pub.body}</div></div>`:'');
+    golf.map(g=>`<div class="row"><span class="ic">⛳</span><span><span class="lbl">Golf:</span> ${siteLink(g.name)}</span></div>`).join('') +
+    (hotel?`<div class="row"><span class="ic">🛏️</span><span><span class="lbl">Stay:</span> ${siteLink(hotel.name)}</span></div>`:'') +
+    (pub?`<div class="pub"><div class="row"><span class="ic">🍺</span><span><span class="lbl">Evening:</span> ${siteLink(pub.name,`<span class="name">${pub.name}</span>`)}</span></div><div class="why">${pub.why||pub.body}</div></div>`:'');
+  card.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
   card.onclick = () => {
     map.flyTo(d.center, d.zoom, { duration: 0.8 });
     if (pub) setTimeout(()=>pub._marker.openPopup(), 850);
