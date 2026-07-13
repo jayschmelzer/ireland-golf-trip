@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ireland Golf Itinerary Map</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme =
+      param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; }
+body {
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+#sidebar {
+  width: 380px;
+  min-width: 380px;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--cp-bg-elevated);
+  border-right: 1px solid var(--cp-border);
+  padding: 20px;
+}
+#sidebar h1 {
+  font-size: 1.35rem;
+  margin: 0 0 4px 0;
+  color: var(--cp-text);
+}
+#sidebar .sub {
+  font-size: 0.85rem;
+  color: var(--cp-text-muted);
+  margin-bottom: 18px;
+}
+.day-card {
+  background: var(--cp-surface);
+  border: 1px solid var(--cp-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.day-card:hover { border-color: var(--cp-accent); transform: translateY(-1px); }
+.day-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.day-badge {
+  background: var(--cp-accent);
+  color: var(--cp-accent-fg);
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.day-title { font-weight: 600; font-size: 0.98rem; }
+.day-region { font-size: 0.78rem; color: var(--cp-text-muted); }
+.row { display: flex; gap: 8px; font-size: 0.83rem; margin: 5px 0; line-height: 1.35; }
+.row .ic { flex-shrink: 0; width: 16px; text-align: center; }
+.row .lbl { color: var(--cp-text-soft); }
+.pub {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--cp-border);
+}
+.pub .name { font-weight: 600; color: var(--cp-accent); }
+.pub .why { font-size: 0.78rem; color: var(--cp-text-muted); margin-top: 2px; }
+#map { flex: 1; height: 100%; }
+.legend {
+  background: var(--cp-panel-strong);
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--cp-border);
+  font-size: 0.8rem;
+  line-height: 1.8;
+  color: var(--cp-text);
+}
+.legend .dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: middle;
+  border: 2px solid #fff;
+}
+.leaflet-popup-content-wrapper {
+  background: var(--cp-surface);
+  color: var(--cp-text);
+  border-radius: 12px;
+}
+.leaflet-popup-tip { background: var(--cp-surface); }
+.popup-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 3px; }
+.popup-type { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--cp-text-muted); margin-bottom: 5px; }
+.popup-body { font-size: 0.82rem; color: var(--cp-text-soft); line-height: 1.4; }
+@media (max-width: 760px) {
+  body { flex-direction: column; }
+  #sidebar { width: 100%; min-width: 0; height: 45%; }
+  #map { height: 55%; }
+}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h1>🏌️ Ireland Golf Itinerary</h1>
+  <div class="sub">6 days along the Wild Atlantic Way · Shannon → Dublin<br>Solid lines = real driving routes between golf courses &amp; hotels (hover a line for distance/time).<br>Pins: 🟥 golf · 🟦 hotel · 🟢 pub/dinner.</div>
+  <div id="total" style="font-size:0.85rem;color:var(--cp-text);background:var(--cp-accent-soft);border:1px solid var(--cp-border);border-radius:10px;padding:8px 12px;margin-bottom:16px;">🚗 Calculating driving routes…</div>
+  <div id="days"></div>
+</div>
+<div id="map"></div>
+
+<script>
+const ACCENT = getComputedStyle(document.documentElement).getPropertyValue('--cp-accent').trim();
+
+// icon factory
+function pin(color, glyph) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="background:${color};width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;">
+             <span style="transform:rotate(45deg);font-size:14px;line-height:1;">${glyph}</span></div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 28],
+    popupAnchor: [0, -28]
+  });
+}
+const COL = { golf: '#b11f4b', hotel: '#0078d4', pub: '#16a34a', travel: '#f59e0b' };
+
+const days = [
+  {
+    n: 'M', day: 'Monday', region: 'Co. Clare',
+    center: [52.933, -9.345], zoom: 11,
+    items: [
+      { type:'travel', name:'Shannon Airport', ll:[52.7019,-8.9248], body:'Arrival point — drive ~1h to Lahinch.' },
+      { type:'golf', name:'Lahinch Golf Club', ll:[52.9380,-9.3430], body:'“The St. Andrews of Ireland.” Old Course. Caddie €95 + tip.' },
+      { type:'hotel', name:'Vaughan Lodge Hotel ★★★★', ll:[52.9312,-9.3438], body:'Boutique base in Lahinch village.' },
+      { type:'pub', name:"Cornerstone Bar & Restaurant", ll:[52.9333,-9.3463], body:'Lahinch Main St. institution — classic Irish dishes, famous fish & chips, and weekend live music. (Danny Mac’s next door for a livelier casual option.)' }
+    ]
+  },
+  {
+    n: 'T', day: 'Tuesday', region: 'Co. Sligo / Mayo',
+    center: [54.16, -9.13], zoom: 10,
+    items: [
+      { type:'golf', name:'Enniscrone Golf Club', ll:[54.2119,-9.0967], body:'Tee 11:30. Dunes classic on Killala Bay. Caddie €75 + tip.' },
+      { type:'hotel', name:'Ballina Manor Hotel ★★★★', ll:[54.1155,-9.1615], body:'Luxury townhouse hotel, Ballina, Co. Mayo.' },
+      { type:'pub', name:'Dillons Bar & Restaurant', ll:[54.1146,-9.1520], body:'Ballina’s standout gastro-pub — historic charm, fireside, live sessions. Top-rated for steak, fish pie and hearty Irish classics.' }
+    ]
+  },
+  {
+    n: 'W', day: 'Wednesday', region: 'Belmullet → Bundoran',
+    center: [54.34, -9.16], zoom: 8,
+    items: [
+      { type:'golf', name:'Carne Golf Links', ll:[54.2078,-10.0680], body:'Early tee 7:30. Wild Atlantic dunes, Belmullet, Mayo. Caddie €80 + tip.' },
+      { type:'hotel', name:'Allingham Arms Hotel ★★★★', ll:[54.4776,-8.2807], body:'Bundoran, Co. Donegal — long transfer up the coast.' },
+      { type:'pub', name:"Madden's Bridge Bar & Restaurant", ll:[54.4757,-8.2830], body:'Family-run favourite steps from the Allingham — lively atmosphere, seafood, steaks and great fish & chips over Donegal Bay.' }
+    ]
+  },
+  {
+    n: 'Th', day: 'Thursday', region: 'Co. Donegal (36 holes)',
+    center: [54.95, -8.05], zoom: 9,
+    items: [
+      { type:'golf', name:'Narin & Portnoo Golf Links', ll:[54.8370,-8.4460], body:'Morning 9:00. “Unspoiled. Pure. Gorgeous.” Caddie €75 + tip.' },
+      { type:'golf', name:'Cruit Island Golf Club', ll:[55.0330,-8.3770], body:'Afternoon 3:00. Dramatic 9-hole cliff-top links. Caddie €75 + tip.' },
+      { type:'hotel', name:'Rosapenna Hotel & Golf Resort', ll:[55.1837,-7.7490], body:'Downings, Co. Donegal — home for two nights.' },
+      { type:'pub', name:'Fisk Seafood Bar', ll:[55.1930,-7.7330], body:'Beside the Harbour Bar in Downings — the most talked-about local dinner. Fresh Donegal seafood, platters & fish tacos. (The Singing Pub nearby for trad music.)' }
+    ]
+  },
+  {
+    n: 'F', day: 'Friday', region: 'Co. Donegal (Rosapenna)',
+    center: [55.185, -7.74], zoom: 13,
+    items: [
+      { type:'golf', name:'Sandy Hills Links', ll:[55.1880,-7.7560], body:'Tee 8:30. Big-dune modern links at Rosapenna. Caddie €90 + tip.' },
+      { type:'golf', name:'Old Tom Morris Links', ll:[55.1837,-7.7490], body:'Tee 1:40. Historic Rosapenna links laid out by Old Tom Morris.' },
+      { type:'hotel', name:'Rosapenna Hotel & Golf Resort', ll:[55.1837,-7.7490], body:'Second night on-site.' },
+      { type:'pub', name:'The Harbour Bar, Downings', ll:[55.1925,-7.7335], body:'Classic Donegal pub — turf fires, old-world charm and hearty seafood pub grub a short hop from the resort.' }
+    ]
+  },
+  {
+    n: 'S', day: 'Saturday', region: 'Donegal → Dublin',
+    center: [54.3, -7.2], zoom: 7,
+    items: [
+      { type:'golf', name:"St. Patrick's Links", ll:[55.1780,-7.7660], body:'Tee 9:00. Tom Doak masterpiece at Maghera / Rosapenna, then drive to Dublin (~3.5h).' },
+      { type:'hotel', name:'The Davenport Hotel ★★★★', ll:[53.3407,-6.2494], body:'O’Callaghan Collection, Merrion Square, Dublin.' },
+      { type:'pub', name:"Lincoln's Inn", ll:[53.3418,-6.2536], body:'Classic Irish bar minutes from the Davenport — warm atmosphere, quality pub food and pints. (The Ginger Man & Doheny & Nesbitt also close by.)' }
+    ]
+  }
+];
+
+const map = L.map('map', { scrollWheelZoom: true }).setView([54.2, -8.4], 7);
+const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+L.tileLayer(
+  isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+  { attribution: '© OpenStreetMap · © CARTO', maxZoom: 19 }
+).addTo(map);
+
+const allLL = [];
+const waypoints = [];   // primary stops (golf + hotel) in trip order
+
+days.forEach((d, di) => {
+  d.items.forEach(it => {
+    const m = L.marker(it.ll, { icon: pin(COL[it.type], it.type==='golf'?'⛳':it.type==='hotel'?'🛏':it.type==='pub'?'🍺':'✈') }).addTo(map);
+    m.bindPopup(`<div class="popup-title">${it.name}</div><div class="popup-type">${d.day} · ${it.type}</div><div class="popup-body">${it.body}</div>`);
+    it._marker = m;
+    allLL.push(it.ll);
+    if (it.type === 'golf' || it.type === 'hotel') waypoints.push({ ll: it.ll, name: it.name });
+  });
+});
+
+map.fitBounds(L.latLngBounds(allLL).pad(0.12));
+
+// ---- Actual driving routes between primary locations (OSRM) ----
+function fmtKm(m){ return (m/1000).toFixed(1) + ' km'; }
+function fmtMin(s){ const t=Math.round(s/60); return t>=60 ? `${Math.floor(t/60)}h ${t%60}m` : `${t} min`; }
+
+async function drawLeg(a, b) {
+  const url = `https://router.project-osrm.org/route/v1/driving/${a.ll[1]},${a.ll[0]};${b.ll[1]},${b.ll[0]}?overview=full&geometries=geojson`;
+  try {
+    const r = await fetch(url);
+    const j = await r.json();
+    if (!j.routes || !j.routes.length) throw new Error('no route');
+    const route = j.routes[0];
+    const latlngs = route.geometry.coordinates.map(c => [c[1], c[0]]);
+    const line = L.polyline(latlngs, { color: ACCENT, weight: 4, opacity: 0.75 }).addTo(map);
+    const label = `${a.name} → ${b.name}<br><b>${fmtKm(route.distance)}</b> · ${fmtMin(route.duration)} drive`;
+    line.bindTooltip(label, { sticky: true });
+    line.bindPopup(`<div class="popup-title">Drive leg</div><div class="popup-body">${label}</div>`);
+    return { distance: route.distance, duration: route.duration };
+  } catch (e) {
+    // fallback: straight dashed line if routing service unavailable
+    L.polyline([a.ll, b.ll], { color: ACCENT, weight: 3, opacity: 0.4, dashArray: '6,8' }).addTo(map);
+    return null;
+  }
+}
+
+async function drawRoutes() {
+  let totalD = 0, totalT = 0, ok = false;
+  for (let i = 0; i < waypoints.length - 1; i++) {
+    const a = waypoints[i], b = waypoints[i+1];
+    if (a.ll[0] === b.ll[0] && a.ll[1] === b.ll[1]) continue; // same spot
+    const res = await drawLeg(a, b);
+    if (res) { totalD += res.distance; totalT += res.duration; ok = true; }
+  }
+  if (ok) {
+    const t = document.getElementById('total');
+    if (t) t.innerHTML = `🚗 Total driving: <b>${fmtKm(totalD)}</b> · ~${fmtMin(totalT)}`;
+  }
+}
+drawRoutes();
+
+// legend
+const legend = L.control({ position: 'bottomright' });
+legend.onAdd = function () {
+  const div = L.DomUtil.create('div', 'legend');
+  div.innerHTML =
+    `<span class="dot" style="background:${COL.golf}"></span>Golf course<br>` +
+    `<span class="dot" style="background:${COL.hotel}"></span>Hotel<br>` +
+    `<span class="dot" style="background:${COL.pub}"></span>Pub / dinner<br>` +
+    `<span class="dot" style="background:${COL.travel}"></span>Airport`;
+  return div;
+};
+legend.addTo(map);
+
+// sidebar
+const wrap = document.getElementById('days');
+days.forEach(d => {
+  const golf = d.items.filter(i=>i.type==='golf');
+  const hotel = d.items.find(i=>i.type==='hotel');
+  const pub = d.items.find(i=>i.type==='pub');
+  const card = document.createElement('div');
+  card.className = 'day-card';
+  card.innerHTML =
+    `<div class="day-head"><div class="day-badge">${d.n}</div>
+       <div><div class="day-title">${d.day}</div><div class="day-region">${d.region}</div></div></div>` +
+    golf.map(g=>`<div class="row"><span class="ic">⛳</span><span><span class="lbl">Golf:</span> ${g.name}</span></div>`).join('') +
+    (hotel?`<div class="row"><span class="ic">🛏️</span><span><span class="lbl">Stay:</span> ${hotel.name}</span></div>`:'') +
+    (pub?`<div class="pub"><div class="row"><span class="ic">🍺</span><span><span class="lbl">Evening:</span> <span class="name">${pub.name}</span></span></div><div class="why">${pub.why||pub.body}</div></div>`:'');
+  card.onclick = () => {
+    map.flyTo(d.center, d.zoom, { duration: 0.8 });
+    if (pub) setTimeout(()=>pub._marker.openPopup(), 850);
+  };
+  wrap.appendChild(card);
+});
+</script>
+</body>
+</html>
