@@ -217,6 +217,9 @@ const LINKS = {
   'Old Tom Morris Links': 'https://www.rosapenna.ie',
   'The Harbour Bar, Downings': 'https://www.theharbourbardownings.ie',
   "St. Patrick's Links": 'https://www.rosapenna.ie',
+  'Cliffs of Moher': 'https://www.cliffsofmoher.ie',
+  'The Beach Bar': 'http://www.thebeachbarsligo.com',
+  'The Stores Pub': 'https://www.tripadvisor.com/Restaurant_Review-g2053621-d12588120-Reviews-The_Stores_Bar-Portsalon_County_Donegal.html',
   'The Davenport Hotel ★★★★': 'https://www.davenporthotel.ie',
   "Lincoln's Inn": 'https://www.lincolns.ie'
 };
@@ -234,7 +237,8 @@ const days = [
       { type:'travel', name:'Shannon Airport', ll:[52.7019,-8.9248], body:'Arrival point — drive ~1h to Lahinch.' },
       { type:'golf', name:'Lahinch Golf Club', ll:[52.9380,-9.3430], body:'“The St. Andrews of Ireland.” Old Course. Caddie €95 + tip.' },
       { type:'hotel', name:'Vaughan Lodge Hotel ★★★★', ll:[52.9312,-9.3438], body:'Boutique base in Lahinch village.' },
-      { type:'pub', name:"Cornerstone Bar & Restaurant", ll:[52.9333,-9.3463], body:'Lahinch Main St. institution — classic Irish dishes, famous fish & chips, and weekend live music. (Danny Mac’s next door for a livelier casual option.)' }
+      { type:'pub', name:"Cornerstone Bar & Restaurant", ll:[52.9333,-9.3463], body:'Lahinch Main St. institution — classic Irish dishes, famous fish & chips, and weekend live music. (Danny Mac’s next door for a livelier casual option.)' },
+      { type:'pub', name:'Cliffs of Moher', ll:[52.9719,-9.4265], body:'Additional option — Ireland’s iconic cliffs, ~15 min from Lahinch. Cafés at the visitor centre plus scenic dining nearby (e.g. Vaughan’s Anchor Inn, Liscannor).' }
     ]
   },
   {
@@ -252,7 +256,8 @@ const days = [
     items: [
       { type:'golf', name:'Carne Golf Links', ll:[54.2078,-10.0680], body:'Early tee 7:30. Wild Atlantic dunes, Belmullet, Mayo. Caddie €80 + tip.' },
       { type:'hotel', name:'Allingham Arms Hotel ★★★★', ll:[54.4776,-8.2807], body:'Bundoran, Co. Donegal — long transfer up the coast.' },
-      { type:'pub', name:"Madden's Bridge Bar & Restaurant", ll:[54.4757,-8.2830], body:'Family-run favourite steps from the Allingham — lively atmosphere, seafood, steaks and great fish & chips over Donegal Bay.' }
+      { type:'pub', name:"Madden's Bridge Bar & Restaurant", ll:[54.4757,-8.2830], body:'Family-run favourite steps from the Allingham — lively atmosphere, seafood, steaks and great fish & chips over Donegal Bay.' },
+      { type:'pub', name:'The Beach Bar', ll:[54.2926,-8.9808], body:'Additional option — the famous thatched Wild Atlantic Way pub at Aughris Head, Co. Sligo, right on the drive up. Fresh seafood, turf fire and pints by the shore.' }
     ]
   },
   {
@@ -272,7 +277,8 @@ const days = [
       { type:'golf', name:'Sandy Hills Links', ll:[55.1880,-7.7560], body:'Tee 8:30. Big-dune modern links at Rosapenna. Caddie €90 + tip.' },
       { type:'golf', name:'Old Tom Morris Links', ll:[55.1837,-7.7490], body:'Tee 1:40. Historic Rosapenna links laid out by Old Tom Morris.' },
       { type:'hotel', name:'Rosapenna Hotel & Golf Resort', ll:[55.1837,-7.7490], body:'Second night on-site.' },
-      { type:'pub', name:'The Harbour Bar, Downings', ll:[55.1925,-7.7335], body:'Classic Donegal pub — turf fires, old-world charm and hearty seafood pub grub a short hop from the resort.' }
+      { type:'pub', name:'The Harbour Bar, Downings', ll:[55.1925,-7.7335], body:'Classic Donegal pub — turf fires, old-world charm and hearty seafood pub grub a short hop from the resort.' },
+      { type:'pub', name:'The Stores Pub', ll:[55.1985,-7.6270], body:'Additional option — “The Stores” olde-world bar at Portsalon pier on the Fanad peninsula, overlooking Lough Swilly. Great views and a traditional Irish pub feel.' }
     ]
   },
   {
@@ -368,7 +374,12 @@ const wrap = document.getElementById('days');
 days.forEach(d => {
   const golf = d.items.filter(i=>i.type==='golf');
   const hotel = d.items.find(i=>i.type==='hotel');
-  const pub = d.items.find(i=>i.type==='pub');
+  const pubs = d.items.filter(i=>i.type==='pub');
+  const pub = pubs[0];
+  const pubsHtml = pubs.length ? `<div class="pub">` + pubs.map((p,idx)=>
+      `<div class="row"><span class="ic">🍺</span><span><span class="lbl">${idx===0?'Evening:':'Also:'}</span> ${siteLink(p.name,`<span class="name">${p.name}</span>`)}</span></div>`
+      + `<div class="why">${p.why||p.body}</div>`
+    ).join('') + `</div>` : '';
   const card = document.createElement('div');
   card.className = 'day-card';
   card.innerHTML =
@@ -376,7 +387,7 @@ days.forEach(d => {
        <div><div class="day-title">${d.day}</div><div class="day-region">${d.region}</div></div></div>` +
     golf.map(g=>`<div class="row"><span class="ic">⛳</span><span><span class="lbl">Golf:</span> ${siteLink(g.name)}</span></div>`).join('') +
     (hotel?`<div class="row"><span class="ic">🛏️</span><span><span class="lbl">Stay:</span> ${siteLink(hotel.name)}</span></div>`:'') +
-    (pub?`<div class="pub"><div class="row"><span class="ic">🍺</span><span><span class="lbl">Evening:</span> ${siteLink(pub.name,`<span class="name">${pub.name}</span>`)}</span></div><div class="why">${pub.why||pub.body}</div></div>`:'');
+    pubsHtml;
   card.querySelectorAll('a').forEach(a => a.addEventListener('click', e => e.stopPropagation()));
   card.onclick = () => {
     map.flyTo(d.center, d.zoom, { duration: 0.8 });
